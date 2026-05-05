@@ -1,3 +1,4 @@
+```
 flowchart LR
     Attaquant["Attaquant<br/>Docker"]
     AdminSOC["Admin Sys / SOC"]
@@ -20,3 +21,4 @@ flowchart LR
     Frontend <--> Backend
     Backend --> Postgres
     Backend --> Celery
+```
