@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     app_name: str = "WAZASH"
     debug: bool = False
     api_v1_prefix: str = "/api/v1"
+    secret_key: str = "dummy-secret-key-for-skeleton-only"
 
 
 settings = Settings()
