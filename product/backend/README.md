@@ -238,12 +238,129 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
 # Retourne 401 Unauthorized
 ```
 
+## EPIC-04 Features (Alertes Simples)
+
+L'EPIC-04 ajoute un système d'alertes simples basées sur les événements ingérés (EPIC-02).
+
+> **Références :** Voir [`EPIC04_PLAN.md`](./EPIC04_PLAN.md) et [`SECURITY_AUDIT_EPIC04.md`](./SECURITY_AUDIT_EPIC04.md)
+
+### Règles d'alerte
+
+Le système génère des alertes selon des règles simples :
+
+| Type d'événement | Sévérité de l'alerte |
+|------------------|----------------------|
+| `intrusion`      | `critical`           |
+| `malware`        | `high`               |
+| Autres           | Aucune alerte générée |
+
+### Endpoints disponibles
+
+#### GET `/api/v1/alerts/`
+Liste toutes les alertes générées, triées par timestamp décroissant.
+
+**Réponse (liste d'alertes) :**
+```json
+[
+  {
+    "id": "alert-001",
+    "event_id": "event-001",
+    "rule_name": "intrusion_detected",
+    "severity": "critical",
+    "timestamp": "2026-05-06T10:30:00",
+    "status": "open"
+  }
+]
+```
+
+#### POST `/api/v1/alerts/generate`
+Génération manuelle d'une alerte à partir d'un événement existant.
+
+**Schéma Pydantic `AlertGeneratePayload` :**
+```python
+class AlertGeneratePayload(BaseModel):
+    event_id: str    # Identifiant de l'événement existant
+```
+
+**Exemple de payload :**
+```json
+{
+    "event_id": "event-001"
+}
+```
+
+**Réponse :**
+```json
+{
+    "message": "Alert generated successfully",
+    "alert": {
+        "id": "alert-001",
+        "event_id": "event-001",
+        "rule_name": "intrusion_detected",
+        "severity": "critical",
+        "timestamp": "2026-05-06T10:30:00",
+        "status": "open"
+    }
+}
+```
+
+#### Génération automatique après POST `/api/v1/events`
+Lors de l'ingestion d'un événement via `POST /api/v1/events`, si le `event_type` correspond à une règle (ex: `intrusion`, `malware`), une alerte est automatiquement générée et stockée.
+
+### Stockage en mémoire
+
+Les alertes sont stockées en mémoire dans une liste Python simple (`alerts_store` dans `app/core/storage.py`).
+
+**Caractéristiques :**
+- ✅ Stockage volatil (données perdues au redémarrage)
+- ✅ Pas de persistance sur disque
+- ✅ Pas de base de données, pas de Redis, pas de Celery
+- ✅ Adapté pour un MVP et des tests
+
+**Fonctions disponibles dans `app/core/storage.py` :**
+- `add_alert(alert)` - Ajoute une alerte
+- `get_alerts()` - Retourne toutes les alertes
+- `get_event_by_id(event_id)` - Récupère un événement par son ID
+
+### Exemples de tests avec curl
+
+**POST event intrusion → alerte générée automatiquement :**
+```bash
+curl -X POST http://localhost:8000/api/v1/events \
+  -H "Content-Type: application/json" \
+  -d '{
+    "endpoint_id": "ep-001",
+    "timestamp": "2026-05-06T10:30:00",
+    "event_type": "intrusion",
+    "severity": "high",
+    "details": {"source_ip": "192.168.1.100"}
+  }'
+# L'alerte est générée automatiquement
+```
+
+**GET alerts pour lister :**
+```bash
+curl -X GET http://localhost:8000/api/v1/alerts/
+# Retourne la liste des alertes
+```
+
+**POST alerts/generate avec payload :**
+```bash
+curl -X POST http://localhost:8000/api/v1/alerts/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_id": "event-001"
+  }'
+# Génère manuellement une alerte pour l'événement event-001
+```
+
 ## Tests
 
-Le projet compte **16 tests** répartis comme suit :
+Le projet compte **24 tests** répartis comme suit :
 - **4 tests auth** (`tests/test_auth.py`) : login valide, login invalide (mauvais mot de passe), login utilisateur inexistant, validation de payload
 - **5 tests heartbeat** (`tests/test_heartbeat.py`) : validation de payload, rejet de payload invalide, stockage en mémoire
 - **5 tests events** (`tests/test_events.py`) : validation de payload, rejet de payload invalide, stockage en mémoire
+- **8 tests alerts** (`tests/test_alerts.py`) : génération automatique après event, lecture des alertes, règles d'alerte, génération manuelle, validation de payload
 - **2 tests health** (`tests/test_health.py`) : vérification du endpoint de santé
 
 Exécuter tous les tests avec pytest :
@@ -266,12 +383,22 @@ tests/test_events.py::test_event_invalid_payload_missing_field PASSED
 tests/test_events.py::test_event_invalid_payload_wrong_type PASSED
 tests/test_events.py::test_event_storage PASSED
 tests/test_events.py::test_event_multiple_storage PASSED
+tests/test_events.py::test_event_generates_alert_intrusion PASSED
+tests/test_events.py::test_event_generates_alert_malware PASSED
 tests/test_auth.py::test_login_valid_admin PASSED
 tests/test_auth.py::test_login_invalid_password PASSED
 tests/test_auth.py::test_login_user_not_found PASSED
 tests/test_auth.py::test_login_invalid_payload PASSED
+tests/test_alerts.py::test_get_alerts_empty PASSED
+tests/test_alerts.py::test_get_alerts_after_event PASSED
+tests/test_alerts.py::test_alert_generation_manual PASSED
+tests/test_alerts.py::test_alert_generation_event_not_found PASSED
+tests/test_alerts.py::test_alert_rule_intrusion_critical PASSED
+tests/test_alerts.py::test_alert_rule_malware_high PASSED
+tests/test_alerts.py::test_alert_invalid_payload PASSED
+tests/test_alerts.py::test_alert_generate_invalid_payload PASSED
 
-16 passed in X.XXs
+24 passed in X.XXs
 ```
 
 ## Structure du projet
@@ -281,7 +408,7 @@ product/backend/
 ├── app/
 │   ├── core/
 │   │   ├── config.py      # Configuration centralisée
-│   │   └── storage.py     # Stockage en mémoire (heartbeats/events/users)
+│   │   └── storage.py     # Stockage en mémoire (heartbeats/events/users/alerts)
 │   ├── auth/
 │   │   ├── router.py      # POST /api/v1/auth/login
 │   │   └── schemas.py     # Schéma LoginPayload
@@ -291,16 +418,23 @@ product/backend/
 │   │   ├── router.py      # POST /api/v1/heartbeat
 │   │   └── schemas.py     # Schéma HeartbeatPayload
 │   ├── events/
-│   │   ├── router.py      # POST /api/v1/events
+│   │   ├── router.py      # POST /api/v1/events + génération auto alerte
 │   │   └── schemas.py     # Schéma EventPayload
+│   ├── alerts/
+│   │   ├── router.py      # GET /api/v1/alerts + POST /api/v1/alerts/generate
+│   │   ├── schemas.py     # Schémas Alert, AlertGeneratePayload
+│   │   └── rules.py       # Règles d'alerte (intrusion→critical, malware→high)
 │   └── main.py            # Point d'entrée FastAPI
 ├── tests/
 │   ├── test_health.py     # Tests health (2 tests)
 │   ├── test_heartbeat.py  # Tests heartbeat (5 tests)
-│   ├── test_events.py     # Tests events (5 tests)
-│   └── test_auth.py       # Tests auth (4 tests)
+│   ├── test_events.py     # Tests events (5 tests + 2 tests génération alerte auto)
+│   ├── test_auth.py       # Tests auth (4 tests)
+│   └── test_alerts.py     # Tests alerts (8 tests)
 ├── pyproject.toml         # Configuration du projet et dépendances
 ├── .env.example           # Exemple de variables d'environnement
+├── EPIC04_PLAN.md          # Planification EPIC-04
+├── SECURITY_AUDIT_EPIC04.md # Audit sécurité EPIC-04
 └── README.md              # Ce fichier
 ```
 

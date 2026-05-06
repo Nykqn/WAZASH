@@ -2,11 +2,13 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class EventPayload(BaseModel):
     """Payload pour un événement de sécurité."""
+
+    model_config = ConfigDict(extra="forbid")
 
     endpoint_id: str
     timestamp: datetime
