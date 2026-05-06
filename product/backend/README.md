@@ -354,13 +354,149 @@ curl -X POST http://localhost:8000/api/v1/alerts/generate \
 # Génère manuellement une alerte pour l'événement event-001
 ```
 
+## EPIC-05 Features (Audit Trail)
+
+L'EPIC-05 ajoute un système d'audit trail automatique pour tracer les actions importantes du système.
+
+> **Références :** Voir [`EPIC05_PLAN.md`](./EPIC05_PLAN.md) et [`SECURITY_AUDIT_EPIC05.md`](./SECURITY_AUDIT_EPIC05.md)
+
+### Actions tracées
+
+Le système audit trail trace automatiquement les actions suivantes :
+- **login** : Connexion d'un utilisateur (avec email)
+- **event_ingested** : Ingestion d'un événement de sécurité
+- **alert_generated** : Génération d'une alerte (automatique ou manuelle)
+
+### Endpoint disponible
+
+#### GET `/api/v1/audit/`
+Liste tous les logs d'audit par ordre chronologique inversé (du plus récent au plus ancien).
+
+**Format des logs :**
+```json
+{
+  "id": "audit-001",
+  "timestamp": "2026-05-06T10:30:00",
+  "action": "login",
+  "user_email": "admin@wazash.io",
+  "details": {
+    "email": "admin@wazash.io"
+  }
+}
+```
+
+**Réponse (liste de logs) :**
+```json
+[
+  {
+    "id": "audit-003",
+    "timestamp": "2026-05-06T10:35:00",
+    "action": "alert_generated",
+    "user_email": null,
+    "details": {
+      "alert_id": "alert-001",
+      "event_id": "event-001",
+      "rule_name": "intrusion_detected"
+    }
+  },
+  {
+    "id": "audit-002",
+    "timestamp": "2026-05-06T10:32:00",
+    "action": "event_ingested",
+    "user_email": null,
+    "details": {
+      "event_id": "event-001",
+      "event_type": "intrusion",
+      "endpoint_id": "ep-001"
+    }
+  },
+  {
+    "id": "audit-001",
+    "timestamp": "2026-05-06T10:30:00",
+    "action": "login",
+    "user_email": "admin@wazash.io",
+    "details": {
+      "email": "admin@wazash.io"
+    }
+  }
+]
+```
+
+### Stockage en mémoire
+
+Les logs d'audit sont stockés en mémoire dans une liste Python simple (`audit_logs_store` dans `app/core/storage.py`).
+
+**Caractéristiques :**
+- ✅ Stockage volatil (données perdues au redémarrage)
+- ✅ Pas de persistance sur disque
+- ✅ Pas de base de données, pas de Redis, pas de Celery
+- ✅ Adapté pour un MVP et des tests
+
+**Fonctions disponibles dans `app/core/storage.py` :**
+- `add_audit_log(action, user_email, details)` - Ajoute un log d'audit
+- `get_audit_logs()` - Retourne tous les logs d'audit (triés par ordre chronologique inversé)
+
+### Intégration automatique
+
+L'audit trail est automatiquement déclenché dans :
+- **Auth** (`app/auth/router.py`) : Après un login réussi
+- **Events** (`app/events/router.py`) : Après ingestion d'un événement
+- **Alerts** (`app/alerts/router.py`) : Après génération d'une alerte
+
+### Exemples de tests avec curl
+
+**Démonstration complète (login → event → alerte → vérifier audit) :**
+
+```bash
+# 1. Login (génère un log d'audit "login")
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@wazash.io",
+    "password": "dummy123"
+  }'
+
+# 2. POST event intrusion (génère un log "event_ingested" + alerte auto)
+curl -X POST http://localhost:8000/api/v1/events \
+  -H "Content-Type: application/json" \
+  -d '{
+    "endpoint_id": "ep-001",
+    "timestamp": "2026-05-06T10:30:00",
+    "event_type": "intrusion",
+    "severity": "high",
+    "details": {"source_ip": "192.168.1.100"}
+  }'
+
+# 3. Vérifier les logs d'audit (devrait contenir login + event_ingested + alert_generated)
+curl -X GET http://localhost:8000/api/v1/audit/
+```
+
+**GET audit pour lister les logs :**
+```bash
+curl -X GET http://localhost:8000/api/v1/audit/
+# Retourne la liste des logs d'audit, du plus récent au plus ancien
+```
+
+**POST alerts/generate (génère aussi un log "alert_generated") :**
+```bash
+curl -X POST http://localhost:8000/api/v1/alerts/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_id": "event-001"
+  }'
+
+# Vérifier que le log d'audit a été ajouté
+curl -X GET http://localhost:8000/api/v1/audit/
+```
+
 ## Tests
 
-Le projet compte **24 tests** répartis comme suit :
+Le projet compte **29 tests** répartis comme suit :
 - **4 tests auth** (`tests/test_auth.py`) : login valide, login invalide (mauvais mot de passe), login utilisateur inexistant, validation de payload
 - **5 tests heartbeat** (`tests/test_heartbeat.py`) : validation de payload, rejet de payload invalide, stockage en mémoire
 - **5 tests events** (`tests/test_events.py`) : validation de payload, rejet de payload invalide, stockage en mémoire
 - **8 tests alerts** (`tests/test_alerts.py`) : génération automatique après event, lecture des alertes, règles d'alerte, génération manuelle, validation de payload
+- **5 tests audit** (`tests/test_audit.py`) : liste des logs, format des logs, traçage après login, traçage après event, traçage après alerte
 - **2 tests health** (`tests/test_health.py`) : vérification du endpoint de santé
 
 Exécuter tous les tests avec pytest :
@@ -397,8 +533,13 @@ tests/test_alerts.py::test_alert_rule_intrusion_critical PASSED
 tests/test_alerts.py::test_alert_rule_malware_high PASSED
 tests/test_alerts.py::test_alert_invalid_payload PASSED
 tests/test_alerts.py::test_alert_generate_invalid_payload PASSED
+tests/test_audit.py::test_get_audit_logs_empty PASSED
+tests/test_audit.py::test_audit_log_format PASSED
+tests/test_audit.py::test_audit_log_after_login PASSED
+tests/test_audit.py::test_audit_log_after_event PASSED
+tests/test_audit.py::test_audit_log_after_alert PASSED
 
-24 passed in X.XXs
+29 passed in X.XXs
 ```
 
 ## Structure du projet
@@ -408,9 +549,9 @@ product/backend/
 ├── app/
 │   ├── core/
 │   │   ├── config.py      # Configuration centralisée
-│   │   └── storage.py     # Stockage en mémoire (heartbeats/events/users/alerts)
+│   │   └── storage.py     # Stockage en mémoire (heartbeats/events/users/alerts/audit)
 │   ├── auth/
-│   │   ├── router.py      # POST /api/v1/auth/login
+│   │   ├── router.py      # POST /api/v1/auth/login + audit login
 │   │   └── schemas.py     # Schéma LoginPayload
 │   ├── health/
 │   │   └── router.py      # Route de health check
@@ -418,23 +559,30 @@ product/backend/
 │   │   ├── router.py      # POST /api/v1/heartbeat
 │   │   └── schemas.py     # Schéma HeartbeatPayload
 │   ├── events/
-│   │   ├── router.py      # POST /api/v1/events + génération auto alerte
+│   │   ├── router.py      # POST /api/v1/events + génération auto alerte + audit event
 │   │   └── schemas.py     # Schéma EventPayload
 │   ├── alerts/
-│   │   ├── router.py      # GET /api/v1/alerts + POST /api/v1/alerts/generate
+│   │   ├── router.py      # GET /api/v1/alerts + POST /api/v1/alerts/generate + audit alert
 │   │   ├── schemas.py     # Schémas Alert, AlertGeneratePayload
 │   │   └── rules.py       # Règles d'alerte (intrusion→critical, malware→high)
+│   ├── audit/
+│   │   ├── router.py      # GET /api/v1/audit/
+│   │   └── schemas.py     # Schéma AuditLog
 │   └── main.py            # Point d'entrée FastAPI
 ├── tests/
 │   ├── test_health.py     # Tests health (2 tests)
 │   ├── test_heartbeat.py  # Tests heartbeat (5 tests)
 │   ├── test_events.py     # Tests events (5 tests + 2 tests génération alerte auto)
 │   ├── test_auth.py       # Tests auth (4 tests)
-│   └── test_alerts.py     # Tests alerts (8 tests)
+│   ├── test_alerts.py     # Tests alerts (8 tests)
+│   └── test_audit.py     # Tests audit (5 tests)
 ├── pyproject.toml         # Configuration du projet et dépendances
 ├── .env.example           # Exemple de variables d'environnement
 ├── EPIC04_PLAN.md          # Planification EPIC-04
 ├── SECURITY_AUDIT_EPIC04.md # Audit sécurité EPIC-04
+├── EPIC05_PLAN.md          # Planification EPIC-05
+├── SECURITY_AUDIT_EPIC05.md # Audit sécurité EPIC-05
+├── EPIC05_DOC.md           # Documentation EPIC-05
 └── README.md              # Ce fichier
 ```
 

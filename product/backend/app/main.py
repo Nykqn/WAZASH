@@ -8,6 +8,7 @@ from app.auth.router import router as auth_router
 from app.heartbeat.router import router as heartbeat_router
 from app.events.router import router as events_router
 from app.alerts.router import router as alerts_router
+from app.audit.router import router as audit_router
 
 app = FastAPI(
     title=settings.app_name,
@@ -19,3 +20,4 @@ app.include_router(auth_router, prefix=settings.api_v1_prefix)
 app.include_router(heartbeat_router, prefix=settings.api_v1_prefix)
 app.include_router(events_router, prefix=settings.api_v1_prefix)
 app.include_router(alerts_router, prefix=f"{settings.api_v1_prefix}/alerts")
+app.include_router(audit_router, prefix=f"{settings.api_v1_prefix}/audit")

@@ -4,7 +4,7 @@ from fastapi import APIRouter
 
 from app.alerts.rules import match_rule
 from app.alerts.schemas import Alert
-from app.core.storage import add_alert, add_event, get_events
+from app.core.storage import add_alert, add_audit_log, add_event, get_events
 from app.events.schemas import EventPayload
 
 router = APIRouter(tags=["events"])
@@ -14,6 +14,7 @@ router = APIRouter(tags=["events"])
 async def receive_event(payload: EventPayload) -> dict[str, str]:
     """Reçoit et stocke un événement de sécurité, génère une alerte si une règle match."""
     add_event(payload.model_dump())
+    add_audit_log("event_ingested", None, f"Événement {payload.event_type} ingéré")
 
     # Vérifier si une règle d'alerte s'applique
     rule = match_rule(payload)

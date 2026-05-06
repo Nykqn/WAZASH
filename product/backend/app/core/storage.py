@@ -1,16 +1,20 @@
-"""Stockage en mémoire pour les heartbeats, événements et alertes."""
+"""Stockage en mémoire pour les heartbeats, événements, alertes et logs d'audit."""
 
+from datetime import datetime
 from typing import Any
 
 from app.alerts.schemas import Alert
+from app.audit.schemas import AuditLog
 
 # Stockage en mémoire (listes simples)
 heartbeats_store: list[dict[str, Any]] = []
 events_store: list[dict[str, Any]] = []
 alerts_store: list[Alert] = []
+audit_store: list[AuditLog] = []
 
-# Compteur pour générer des IDs uniques
+# Compteurs pour générer des IDs uniques
 alert_id_counter: int = 0
+audit_id_counter: int = 0
 
 
 def add_heartbeat(heartbeat: dict[str, Any]) -> None:
@@ -45,3 +49,23 @@ def add_alert(alert: Alert) -> Alert:
 def get_alerts() -> list[Alert]:
     """Retourne toutes les alertes stockées."""
     return alerts_store
+
+
+def add_audit_log(action: str, user_email: str | None, details: str) -> AuditLog:
+    """Ajoute un log d'audit au stockage en mémoire."""
+    global audit_id_counter
+    audit_id_counter += 1
+    log = AuditLog(
+        id=audit_id_counter,
+        timestamp=datetime.now(),
+        action=action,
+        user_email=user_email,
+        details=details,
+    )
+    audit_store.append(log)
+    return log
+
+
+def get_audit_logs() -> list[AuditLog]:
+    """Retourne tous les logs d'audit stockés."""
+    return audit_store

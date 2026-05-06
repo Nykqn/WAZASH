@@ -3,6 +3,7 @@
 from fastapi import APIRouter, HTTPException, status
 
 from app.auth.schemas import LoginPayload
+from app.core.storage import add_audit_log
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -28,6 +29,8 @@ def login(payload: LoginPayload) -> dict:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
         )
+
+    add_audit_log("login", payload.email, f"Connexion réussie pour {payload.email}")
 
     return {
         "access_token": "dummy-token-123",

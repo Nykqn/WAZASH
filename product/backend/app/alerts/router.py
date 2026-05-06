@@ -4,7 +4,7 @@ from fastapi import APIRouter
 
 from app.alerts.rules import match_rule
 from app.alerts.schemas import Alert, AlertGenerateResponse
-from app.core.storage import add_alert, get_alerts
+from app.core.storage import add_alert, add_audit_log, get_alerts
 from app.events.schemas import EventPayload
 
 router = APIRouter(tags=["alerts"])
@@ -40,6 +40,7 @@ async def generate_alert(payload: EventPayload) -> AlertGenerateResponse:
     )
 
     alert = add_alert(alert)
+    add_audit_log("alert_generated", None, f"Alerte {alert.rule_name} générée")
 
     return AlertGenerateResponse(
         status="generated",
