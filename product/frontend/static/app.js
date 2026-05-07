@@ -72,39 +72,9 @@ function restoreSession() {
     updateStatus(true);
     document.getElementById('login-section').classList.add('hidden');
     document.getElementById('dashboard-section').classList.remove('hidden');
-    showSection('health');
+    showSection('heartbeats');
+    checkHealth();
 }
-
-// ===== LOGIN =====
-
-document.getElementById('login-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const btn = e.target.querySelector('button[type="submit"]');
-    btn.disabled = true;
-    btn.textContent = 'Connexion...';
-    try {
-        const resp = await fetch(`${API_BASE}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        });
-        if (!resp.ok) throw new Error('Identifiants invalides');
-        const data = await resp.json();
-        setToken(data.access_token);
-        updateStatus(true);
-        document.getElementById('login-section').classList.add('hidden');
-        document.getElementById('dashboard-section').classList.remove('hidden');
-        document.getElementById('login-error').textContent = '';
-        showSection('health');
-        showToast('Connect\u00e9 en tant que ' + email, 'success');
-    } catch (err) {
-        document.getElementById('login-error').textContent = err.message;
-    } finally {
-        btn.disabled = false;
-        btn.textContent = 'Connexion';
-    }
 });
 
 function logout() {
@@ -145,24 +115,17 @@ async function apiFetch(url, options = {}) {
 // ===== HEALTH =====
 
 async function checkHealth() {
-    const icon = document.getElementById('health-icon');
-    const title = document.getElementById('health-title');
-    const desc = document.getElementById('health-desc');
+    const dot = document.getElementById('health-dot');
+    const label = document.getElementById('health-label');
     try {
         const resp = await fetch(API_HEALTH);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
-        icon.className = 'health-status ok';
-        icon.textContent = '\u2713';
-        title.textContent = `${data.status.toUpperCase()} \u2014 ${data.service}`;
-        desc.textContent = 'Service op\u00e9rationnel';
-        showToast('Backend OK', 'success');
+        dot.style.color = 'var(--text-success)';
+        label.textContent = `OK \u2014 ${data.service}`;
     } catch (err) {
-        icon.className = 'health-status error';
-        icon.textContent = '\u2717';
-        title.textContent = 'Indisponible';
-        desc.textContent = err.message;
-        showToast('Health check: ' + err.message, 'error');
+        dot.style.color = 'var(--text-danger)';
+        label.textContent = 'Indisponible';
     }
 }
 
@@ -468,7 +431,6 @@ async function loadAudit() {
 // ===== SECTIONS MAP FOR AUTO-LOAD =====
 
 const sectionLoaders = {
-    health: null,
     heartbeats: loadHeartbeats,
     events: loadEvents,
     assets: loadAssets,

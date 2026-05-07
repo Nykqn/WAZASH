@@ -50,13 +50,8 @@
         </div>
 
         <nav class="sidebar-nav">
-            <div class="section-label">Général</div>
-            <button onclick="showSection('health')" data-section="health" class="active">
-                <span class="icon">&#9679;</span> <span>Health</span>
-            </button>
-
             <div class="section-label">Télémétrie</div>
-            <button onclick="showSection('heartbeats')" data-section="heartbeats">
+            <button onclick="showSection('heartbeats')" data-section="heartbeats" class="active">
                 <span class="icon">&#9675;</span> <span>Heartbeats</span>
             </button>
             <button onclick="showSection('events')" data-section="events">
@@ -76,6 +71,11 @@
         </nav>
 
         <div class="sidebar-footer">
+            <div class="health-indicator" id="health-indicator">
+                <span class="health-dot" id="health-dot">&#9679;</span>
+                <span class="health-label" id="health-label">Vérification...</span>
+                <button class="btn-icon-small" onclick="checkHealth()" title="Vérifier">&#8635;</button>
+            </div>
             <span id="status" class="connection-badge disconnected">Déconnecté</span>
             <button onclick="logout()" class="btn-logout">Déconnexion</button>
         </div>
@@ -84,26 +84,8 @@
     <!-- Main Content -->
     <main class="main-content">
 
-        <!-- HEALTH -->
-        <section id="health" class="content-section active">
-            <div class="section-header">
-                <div>
-                    <h2>Health Check</h2>
-                    <p class="section-desc">État du service backend WAZASH</p>
-                </div>
-            </div>
-            <div id="health-card" class="health-card">
-                <div class="health-status" id="health-icon">&#9679;</div>
-                <div class="health-info">
-                    <h4 id="health-title">Prêt</h4>
-                    <p id="health-desc">Cliquez sur Vérifier pour tester la connexion</p>
-                </div>
-                <button onclick="checkHealth()" class="btn btn-primary" style="margin-left:auto;flex-shrink:0;">Vérifier</button>
-            </div>
-        </section>
-
         <!-- HEARTBEATS -->
-        <section id="heartbeats" class="content-section">
+        <section id="heartbeats" class="content-section active">
             <div class="section-header">
                 <div>
                     <h2>Heartbeats</h2>
