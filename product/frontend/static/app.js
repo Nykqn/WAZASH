@@ -122,6 +122,9 @@ function showSection(section) {
     if (currentSection) document.getElementById(currentSection).classList.remove('active');
     currentSection = section;
     document.getElementById(section).classList.add('active');
+    if (sectionLoaders[section]) {
+        setTimeout(sectionLoaders[section], 50);
+    }
 }
 
 // ===== API FETCH =====
@@ -471,30 +474,6 @@ const sectionLoaders = {
     assets: loadAssets,
     alerts: loadAlerts,
     audit: loadAudit,
-};
-
-const origShowSection = showSection;
-showSection = function(section) {
-    origShowSection(section);
-    if (sectionLoaders[section] && section !== currentSection) {
-        sectionLoaders[section]();
-    }
-};
-
-// Override to load data when section becomes active
-const observeSection = function(section) {
-    if (sectionLoaders[section]) {
-        setTimeout(sectionLoaders[section], 100);
-    }
-};
-
-// Patch showSection to load data on first visit
-const _origShow = showSection;
-showSection = function(section) {
-    _origShow(section);
-    if (sectionLoaders[section]) {
-        setTimeout(sectionLoaders[section], 50);
-    }
 };
 
 // ===== INIT =====

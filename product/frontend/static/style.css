@@ -332,6 +332,9 @@ body {
   max-width: 1280px;
 }
 
+.content-section { display: none; }
+.content-section.active { display: block; }
+
 .section-header {
   display: flex;
   align-items: center;
