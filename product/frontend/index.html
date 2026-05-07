@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WAZASH — SOC Dashboard</title>
+    <link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+
+<!-- ===== TOAST CONTAINER ===== -->
+<div id="toast-container"></div>
+
+<!-- ===== LOGIN ===== -->
+<div id="login-section" class="login-page">
+    <div class="login-card">
+        <div class="brand">
+            <div class="brand-icon">W</div>
+            <div>
+                <h1>WAZASH</h1>
+                <p class="subtitle">SOC Dashboard</p>
+            </div>
+        </div>
+        <form id="login-form">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="admin@wazash.io" value="admin@wazash.io" required autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label for="password">Mot de passe</label>
+                <input type="password" id="password" placeholder="Mot de passe" value="dummy123" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn-primary">Connexion</button>
+            <div id="login-error" class="error"></div>
+        </form>
+    </div>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div id="dashboard-section" class="dashboard hidden">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">W</div>
+            <div class="brand-text">
+                <h2>WAZASH</h2>
+                <span class="version">v0.3</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="section-label">Général</div>
+            <button onclick="showSection('health')" data-section="health" class="active">
+                <span class="icon">&#9679;</span> <span>Health</span>
+            </button>
+
+            <div class="section-label">Télémétrie</div>
+            <button onclick="showSection('heartbeats')" data-section="heartbeats">
+                <span class="icon">&#9675;</span> <span>Heartbeats</span>
+            </button>
+            <button onclick="showSection('events')" data-section="events">
+                <span class="icon">&#9632;</span> <span>Events</span>
+            </button>
+            <button onclick="showSection('assets')" data-section="assets">
+                <span class="icon">&#9670;</span> <span>Assets</span>
+            </button>
+
+            <div class="section-label">Sécurité</div>
+            <button onclick="showSection('alerts')" data-section="alerts">
+                <span class="icon">&#9650;</span> <span>Alertes</span>
+            </button>
+            <button onclick="showSection('audit')" data-section="audit">
+                <span class="icon">&#9673;</span> <span>Audit</span>
+            </button>
+        </nav>
+
+        <div class="sidebar-footer">
+            <span id="status" class="connection-badge disconnected">Déconnecté</span>
+            <button onclick="logout()" class="btn-logout">Déconnexion</button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <!-- HEALTH -->
+        <section id="health" class="content-section active">
+            <div class="section-header">
+                <div>
+                    <h2>Health Check</h2>
+                    <p class="section-desc">État du service backend WAZASH</p>
+                </div>
+            </div>
+            <div id="health-card" class="health-card">
+                <div class="health-status" id="health-icon">&#9679;</div>
+                <div class="health-info">
+                    <h4 id="health-title">Prêt</h4>
+                    <p id="health-desc">Cliquez sur Vérifier pour tester la connexion</p>
+                </div>
+                <button onclick="checkHealth()" class="btn btn-primary" style="margin-left:auto;flex-shrink:0;">Vérifier</button>
+            </div>
+        </section>
+
+        <!-- HEARTBEATS -->
+        <section id="heartbeats" class="content-section">
+            <div class="section-header">
+                <div>
+                    <h2>Heartbeats</h2>
+                    <p class="section-desc">Télémétrie de disponibilité des endpoints</p>
+                </div>
+            </div>
+            <div id="hb-stats" class="stats-row"></div>
+            <div class="action-bar">
+                <button onclick="toggleForm('hb-form-panel')" class="btn btn-primary">+ Heartbeat</button>
+                <button onclick="loadHeartbeats()" class="btn btn-outline">Actualiser</button>
+                <a href="api/v1/heartbeats?format=csv" class="btn btn-export" download="heartbeats.csv">CSV</a>
+            </div>
+            <div id="hb-form-panel" class="form-panel hidden">
+                <h3>Nouveau Heartbeat</h3>
+                <form id="hb-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Endpoint ID</label>
+                            <input type="text" id="hb-endpoint" placeholder="ex: EP-001" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Date / Heure</label>
+                            <input type="datetime-local" id="hb-timestamp" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Statut</label>
+                            <select id="hb-status">
+                                <option value="up">Up</option>
+                                <option value="down">Down</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" onclick="toggleForm('hb-form-panel')" class="btn btn-outline">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Envoyer</button>
+                    </div>
+                </form>
+            </div>
+            <div class="table-container" id="hb-container">
+                <div class="empty-state"><div class="empty-icon">&#9675;</div>Aucun heartbeat reçu. Envoyez-en un ou attendez les simulateurs.</div>
+                <table id="hb-table" class="data-table hidden">
+                    <thead><tr><th>ID</th><th>Endpoint</th><th>Date</th><th>Statut</th></tr></thead>
+                    <tbody id="hb-tbody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- EVENTS -->
+        <section id="events" class="content-section">
+            <div class="section-header">
+                <div>
+                    <h2>Événements</h2>
+                    <p class="section-desc">Événements de sécurité ingérés par les endpoints</p>
+                </div>
+            </div>
+            <div id="ev-stats" class="stats-row"></div>
+            <div class="action-bar">
+                <button onclick="toggleForm('ev-form-panel')" class="btn btn-primary">+ Événement</button>
+                <button onclick="loadEvents()" class="btn btn-outline">Actualiser</button>
+                <a href="api/v1/events?format=csv" class="btn btn-export" download="events.csv">CSV</a>
+            </div>
+            <div id="ev-form-panel" class="form-panel hidden">
+                <h3>Nouvel Événement</h3>
+                <form id="ev-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Endpoint ID</label>
+                            <input type="text" id="ev-endpoint" placeholder="ex: EP-001" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Date / Heure</label>
+                            <input type="datetime-local" id="ev-timestamp" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Type d'événement</label>
+                            <input type="text" id="ev-type" placeholder="ex: intrusion, malware" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Sévérité</label>
+                            <select id="ev-severity">
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" onclick="toggleForm('ev-form-panel')" class="btn btn-outline">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Envoyer</button>
+                    </div>
+                </form>
+            </div>
+            <div class="table-container" id="ev-container">
+                <div class="empty-state"><div class="empty-icon">&#9632;</div>Aucun événement reçu.</div>
+                <table id="ev-table" class="data-table hidden">
+                    <thead><tr><th>ID</th><th>Endpoint</th><th>Type</th><th>Sévérité</th><th>Date</th></tr></thead>
+                    <tbody id="ev-tbody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ASSETS -->
+        <section id="assets" class="content-section">
+            <div class="section-header">
+                <div>
+                    <h2>Inventaire d'actifs</h2>
+                    <p class="section-desc">Endpoints surveillés — auto-enregistrement via heartbeat</p>
+                </div>
+            </div>
+            <div id="asset-stats" class="stats-row"></div>
+            <div class="action-bar">
+                <button onclick="toggleForm('asset-form-panel')" class="btn btn-primary">+ Asset</button>
+                <button onclick="loadAssets()" class="btn btn-outline">Actualiser</button>
+                <a href="api/v1/assets/?format=csv" class="btn btn-export" download="assets.csv">CSV</a>
+            </div>
+            <div id="asset-form-panel" class="form-panel hidden">
+                <h3>Nouvel Asset</h3>
+                <form id="asset-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Endpoint ID</label>
+                            <input type="text" id="asset-endpoint-id" placeholder="ex: EP-001" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Hostname</label>
+                            <input type="text" id="asset-hostname" placeholder="ex: srv-web-01">
+                        </div>
+                        <div class="form-group">
+                            <label>Adresse IP</label>
+                            <input type="text" id="asset-ip" placeholder="ex: 192.168.1.10">
+                        </div>
+                        <div class="form-group">
+                            <label>OS</label>
+                            <input type="text" id="asset-os" placeholder="ex: Ubuntu 24.04">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" onclick="toggleForm('asset-form-panel')" class="btn btn-outline">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Ajouter</button>
+                    </div>
+                </form>
+            </div>
+            <div class="table-container" id="asset-container">
+                <div class="empty-state"><div class="empty-icon">&#9670;</div>Aucun asset. Envoyez un heartbeat pour auto-enregistrer un endpoint.</div>
+                <table id="asset-table" class="data-table hidden">
+                    <thead><tr><th>Endpoint</th><th>Hostname</th><th>IP</th><th>OS</th><th>Statut</th><th>Dernier vu</th><th>Actions</th></tr></thead>
+                    <tbody id="asset-tbody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ALERTS -->
+        <section id="alerts" class="content-section">
+            <div class="section-header">
+                <div>
+                    <h2>Alertes</h2>
+                    <p class="section-desc">Alertes de sécurité générées par les règles de détection</p>
+                </div>
+            </div>
+            <div id="alert-stats" class="stats-row"></div>
+            <div class="action-bar">
+                <button onclick="loadAlerts()" class="btn btn-outline">Actualiser</button>
+                <a href="api/v1/alerts/?format=csv" class="btn btn-export" download="alerts.csv">CSV</a>
+            </div>
+            <div class="table-container" id="alert-container">
+                <div class="empty-state"><div class="empty-icon">&#9650;</div>Aucune alerte pour le moment.</div>
+                <table id="alerts-table" class="data-table hidden">
+                    <thead><tr><th>ID</th><th>Règle</th><th>Sévérité</th><th>Date</th><th>Statut</th></tr></thead>
+                    <tbody id="alerts-tbody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- AUDIT -->
+        <section id="audit" class="content-section">
+            <div class="section-header">
+                <div>
+                    <h2>Audit Trail</h2>
+                    <p class="section-desc">Journal des actions système tracées</p>
+                </div>
+            </div>
+            <div class="action-bar">
+                <button onclick="loadAudit()" class="btn btn-outline">Actualiser</button>
+                <a href="api/v1/audit/?format=csv" class="btn btn-export" download="audit.csv">CSV</a>
+            </div>
+            <div class="table-container" id="audit-container">
+                <div class="empty-state"><div class="empty-icon">&#9673;</div>Aucun log d'audit.</div>
+                <table id="audit-table" class="data-table hidden">
+                    <thead><tr><th>ID</th><th>Date</th><th>Action</th><th>Utilisateur</th><th>Détails</th></tr></thead>
+                    <tbody id="audit-tbody"></tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script src="static/app.js"></script>
+</body>
+</html>

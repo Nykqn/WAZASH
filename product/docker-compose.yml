@@ -1,0 +1,103 @@
+# =============================================================================
+# WAZASH — Lab Docker Complet (EPIC-11)
+# Backend + Frontend + PostgreSQL + Endpoint Simulator + Attacker Simulator
+# =============================================================================
+
+networks:
+  wazash-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+
+services:
+  wazash-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: wazash-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://wazash:wazash@db:5432/wazash
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev-secret-key-change-in-production}
+      - JWT_ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+    networks:
+      - wazash-net
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  wazash-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: wazash-frontend
+    ports:
+      - "8080:80"
+    networks:
+      - wazash-net
+    depends_on:
+      - wazash-backend
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: wazash-db
+    environment:
+      POSTGRES_USER: wazash
+      POSTGRES_PASSWORD: wazash
+      POSTGRES_DB: wazash
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - wazash-net
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wazash -d wazash"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  endpoint-simulator:
+    build:
+      context: ./endpoint-simulator
+      dockerfile: Dockerfile
+    container_name: wazash-endpoint-sim
+    environment:
+      - PYTHONUNBUFFERED=1
+      - API_BASE=http://wazash-backend:8000/api/v1
+      - ENDPOINTS=ep-web-01,ep-db-01,ep-fw-01,ep-wks-01
+      - INTERVAL_SECONDS=10
+    networks:
+      - wazash-net
+    depends_on:
+      - wazash-backend
+    restart: unless-stopped
+
+  attacker-simulator:
+    build:
+      context: ./attacker-simulator
+      dockerfile: Dockerfile
+    container_name: wazash-attacker-sim
+    environment:
+      - PYTHONUNBUFFERED=1
+      - API_BASE=http://wazash-backend:8000/api/v1
+      - INTERVAL_SECONDS=30
+    networks:
+      - wazash-net
+    depends_on:
+      - wazash-backend
+    restart: unless-stopped

@@ -1,0 +1,55 @@
+# =============================================================================
+# WAZASH Backend - Docker Ignore
+# Exclut les fichiers inutiles ou sensibles de l'image Docker
+# =============================================================================
+
+# Environnement Python local
+.venv/
+.venv*
+
+# Cache Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Variables d'environnement (SECRETS - ne jamais inclure dans l'image)
+.env
+.env.local
+.env.*.local
+
+# Git
+.git/
+.gitignore
+
+# Tests et cache
+.pytest_cache/
+tests/
+.coverage
+htmlcov/
+
+# Documentation et plans (optionnel - peut être commenté si besoin dans l'image)
+*.md
+!pyproject.toml
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Docker (évite la récursion)
+# docker-compose.yml  # Décommentez si vous ne voulez pas le compose dans l'image
+# Dockerfile          # Décommentez si vous ne voulez pas le Dockerfile dans l'image
