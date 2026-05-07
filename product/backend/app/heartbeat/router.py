@@ -6,7 +6,9 @@ from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.security import get_current_user, verify_agent_key
 from app.core.storage import add_heartbeat, get_heartbeats, seed_default_users
+from app.models.user import User
 from app.heartbeat.schemas import HeartbeatPayload
 from app.models.heartbeat import Heartbeat
 
@@ -24,7 +26,7 @@ router = APIRouter(tags=["heartbeat"])
 
 
 @router.post("/heartbeat")
-async def receive_heartbeat(payload: HeartbeatPayload, db: Session = Depends(get_db)) -> dict[str, str]:
+async def receive_heartbeat(payload: HeartbeatPayload, db: Session = Depends(get_db), _: bool = Depends(verify_agent_key)) -> dict[str, str]:
     seed_default_users(db)
     auto_register_asset(db, payload.endpoint_id)
     add_heartbeat(db, payload.model_dump())
@@ -43,6 +45,7 @@ async def receive_heartbeat(payload: HeartbeatPayload, db: Session = Depends(get
 @router.get("/heartbeats")
 async def list_heartbeats(
     db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
     format: str = "json",
     endpoint_id: str | None = None,
     status: str | None = None,

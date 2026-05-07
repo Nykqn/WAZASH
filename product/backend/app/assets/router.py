@@ -4,9 +4,11 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.security import get_current_user, require_role
 from app.core.storage import add_audit_log, seed_default_users
 from app.assets.schemas import Asset as AssetSchema, AssetCreate, AssetUpdate
 from app.models.asset import Asset
+from app.models.user import User
 
 router = APIRouter(prefix="/assets", tags=["assets"])
 
@@ -14,6 +16,7 @@ router = APIRouter(prefix="/assets", tags=["assets"])
 @router.get("/", response_model=list[AssetSchema])
 async def list_assets(
     db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
     format: str = "json",
     status_filter: str | None = None,
 ):
@@ -34,7 +37,7 @@ async def list_assets(
 
 
 @router.post("/", response_model=AssetSchema, status_code=status.HTTP_201_CREATED)
-async def create_asset(payload: AssetCreate, db: Session = Depends(get_db)):
+async def create_asset(payload: AssetCreate, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     seed_default_users(db)
     existing = db.query(Asset).filter(Asset.endpoint_id == payload.endpoint_id).first()
     if existing:
@@ -55,7 +58,7 @@ async def create_asset(payload: AssetCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/{endpoint_id}", response_model=AssetSchema)
-async def get_asset(endpoint_id: str, db: Session = Depends(get_db)):
+async def get_asset(endpoint_id: str, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     seed_default_users(db)
     asset = db.query(Asset).filter(Asset.endpoint_id == endpoint_id).first()
     if not asset:
@@ -64,7 +67,7 @@ async def get_asset(endpoint_id: str, db: Session = Depends(get_db)):
 
 
 @router.patch("/{endpoint_id}", response_model=AssetSchema)
-async def update_asset(endpoint_id: str, payload: AssetUpdate, db: Session = Depends(get_db)):
+async def update_asset(endpoint_id: str, payload: AssetUpdate, db: Session = Depends(get_db), _: User = Depends(require_role("admin"))):
     seed_default_users(db)
     asset = db.query(Asset).filter(Asset.endpoint_id == endpoint_id).first()
     if not asset:
@@ -81,7 +84,7 @@ async def update_asset(endpoint_id: str, payload: AssetUpdate, db: Session = Dep
 
 
 @router.delete("/{endpoint_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_asset(endpoint_id: str, db: Session = Depends(get_db)):
+async def delete_asset(endpoint_id: str, db: Session = Depends(get_db), _: User = Depends(require_role("admin"))):
     seed_default_users(db)
     asset = db.query(Asset).filter(Asset.endpoint_id == endpoint_id).first()
     if not asset:

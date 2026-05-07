@@ -10,6 +10,8 @@ import requests
 API_BASE = os.environ.get("API_BASE", "http://wazash-backend:8000/api/v1")
 ENDPOINTS = os.environ.get("ENDPOINTS", "ep-web-01,ep-db-01,ep-fw-01,ep-wks-01").split(",")
 INTERVAL = int(os.environ.get("INTERVAL_SECONDS", "10"))
+API_KEY = os.environ.get("API_KEY", "wazash-agent-key-2026")
+HEADERS = {"X-API-Key": API_KEY, "Content-Type": "application/json"}
 
 
 def send_heartbeat(endpoint_id: str) -> None:
@@ -20,7 +22,7 @@ def send_heartbeat(endpoint_id: str) -> None:
         "status": status,
     }
     try:
-        resp = requests.post(f"{API_BASE}/heartbeat", json=payload, timeout=5)
+        resp = requests.post(f"{API_BASE}/heartbeat", json=payload, headers=HEADERS, timeout=5)
         result = "OK" if resp.status_code == 200 else f"HTTP {resp.status_code}"
         print(f"[{datetime.now(timezone.utc).isoformat()}] HB {endpoint_id} -> {status} ({result})")
     except Exception as e:

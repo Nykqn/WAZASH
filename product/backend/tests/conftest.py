@@ -10,6 +10,7 @@ import app.models  # noqa: F401
 
 from app.core.config import settings
 from app.core.database import Base, get_db
+from app.core.security import get_current_user, verify_agent_key
 from app.core.storage import seed_default_users
 from app.main import app
 
@@ -28,7 +29,18 @@ def override_get_db():
         db.close()
 
 
+async def override_get_current_user():
+    from app.models.user import User
+    return User(email="test@wazash.io", role="admin", is_active=True)
+
+
+def override_verify_agent_key():
+    return True
+
+
 app.dependency_overrides[get_db] = override_get_db
+app.dependency_overrides[get_current_user] = override_get_current_user
+app.dependency_overrides[verify_agent_key] = override_verify_agent_key
 
 
 @pytest.fixture(scope="function", autouse=True)

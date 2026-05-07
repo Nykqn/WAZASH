@@ -7,8 +7,10 @@ from sqlalchemy.orm import Session
 from app.alerts.rules import match_rule
 from app.alerts.schemas import AlertGenerateResponse
 from app.core.database import get_db
+from app.core.security import get_current_user
 from app.core.storage import add_alert, add_audit_log, get_alerts, get_events, seed_default_users
 from app.events.schemas import EventPayload
+from app.models.user import User
 
 router = APIRouter(tags=["alerts"])
 
@@ -16,6 +18,7 @@ router = APIRouter(tags=["alerts"])
 @router.get("/")
 async def list_alerts(
     db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
     format: str = "json",
     severity: str | None = None,
     status: str | None = None,
@@ -41,7 +44,7 @@ async def list_alerts(
 
 
 @router.post("/generate")
-async def generate_alert(payload: EventPayload, db: Session = Depends(get_db)) -> AlertGenerateResponse:
+async def generate_alert(payload: EventPayload, db: Session = Depends(get_db), _: User = Depends(get_current_user)) -> AlertGenerateResponse:
     seed_default_users(db)
     rule = match_rule(payload)
 

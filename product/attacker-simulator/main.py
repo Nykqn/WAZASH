@@ -9,6 +9,8 @@ import requests
 
 API_BASE = os.environ.get("API_BASE", "http://wazash-backend:8000/api/v1")
 INTERVAL = int(os.environ.get("INTERVAL_SECONDS", "30"))
+API_KEY = os.environ.get("API_KEY", "wazash-agent-key-2026")
+HEADERS = {"X-API-Key": API_KEY, "Content-Type": "application/json"}
 
 ATTACK_TYPES = [
     {"event_type": "intrusion", "severity": "high", "details": {"source_ip": "10.0.0.50", "target_port": 22, "method": "ssh_bruteforce"}},
@@ -31,7 +33,7 @@ def send_attack() -> None:
         "details": attack["details"],
     }
     try:
-        resp = requests.post(f"{API_BASE}/events", json=payload, timeout=5)
+        resp = requests.post(f"{API_BASE}/events", json=payload, headers=HEADERS, timeout=5)
         result = "OK" if resp.status_code == 200 else f"HTTP {resp.status_code}"
         print(f"[{datetime.now(timezone.utc).isoformat()}] ATTACK {attack['event_type']} -> {target} ({result})")
     except Exception as e:

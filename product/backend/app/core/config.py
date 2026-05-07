@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     jwt_secret_key: str = "dev-secret-key-change-in-production"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+    agent_api_key: str = "wazash-agent-key-2026"
 
 
 settings = Settings()

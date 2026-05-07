@@ -3,7 +3,7 @@ from typing import Any
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
@@ -57,3 +57,12 @@ def require_role(role: str):
             )
         return current_user
     return _checker
+
+
+def verify_agent_key(x_api_key: str = Header(..., alias="X-API-Key")):
+    if x_api_key != settings.agent_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid agent API key",
+        )
+    return True

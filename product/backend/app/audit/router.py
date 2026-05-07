@@ -5,7 +5,9 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.security import get_current_user, require_role
 from app.core.storage import get_audit_logs, seed_default_users
+from app.models.user import User
 
 router = APIRouter(tags=["audit"])
 
@@ -13,6 +15,7 @@ router = APIRouter(tags=["audit"])
 @router.get("/")
 async def list_audit_logs(
     db: Session = Depends(get_db),
+    _: User = Depends(require_role("admin")),
     format: str = "json",
     action: str | None = None,
     user_email: str | None = None,
