@@ -64,6 +64,39 @@ function handleAuthError() {
     showToast('Session expir\u00e9e, reconnectez-vous', 'warning');
 }
 
+// ===== LOGIN =====
+
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Connexion...';
+    try {
+        const resp = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        if (!resp.ok) throw new Error('Identifiants invalides');
+        const data = await resp.json();
+        setToken(data.access_token);
+        updateStatus(true);
+        document.getElementById('login-section').classList.add('hidden');
+        document.getElementById('dashboard-section').classList.remove('hidden');
+        document.getElementById('login-error').textContent = '';
+        showSection('dashboard');
+        checkHealth();
+        showToast('Connect\u00e9 en tant que ' + email, 'success');
+    } catch (err) {
+        document.getElementById('login-error').textContent = err.message;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Connexion';
+    }
+});
+
 function restoreSession() {
     if (isTokenExpired()) {
         removeToken();
@@ -72,10 +105,9 @@ function restoreSession() {
     updateStatus(true);
     document.getElementById('login-section').classList.add('hidden');
     document.getElementById('dashboard-section').classList.remove('hidden');
-    showSection('heartbeats');
+    showSection('dashboard');
     checkHealth();
 }
-});
 
 function logout() {
     removeToken();
@@ -110,6 +142,53 @@ async function apiFetch(url, options = {}) {
     }
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     return resp.json();
+}
+
+// ===== DASHBOARD =====
+
+async function loadDashboard() {
+    try {
+        const [heartbeats, events, alerts, assets] = await Promise.all([
+            apiFetch(`${API_BASE}/heartbeats`),
+            apiFetch(`${API_BASE}/events`),
+            apiFetch(`${API_BASE}/alerts/`),
+            apiFetch(`${API_BASE}/assets/`),
+        ]);
+        const hbUp = heartbeats.filter(h => h.status === 'up').length;
+        const hbDown = heartbeats.filter(h => h.status === 'down').length;
+        const hbPct = heartbeats.length ? Math.round(hbUp / heartbeats.length * 100) : 0;
+        const critAlerts = alerts.filter(a => a.severity === 'critical').length;
+        const highAlerts = alerts.filter(a => a.severity === 'high').length;
+        const activeAssets = assets.filter(a => a.status === 'active').length;
+        buildStatsRow('dash-stats', [
+            { label: 'Heartbeats', value: heartbeats.length, color: 'var(--text-info)' },
+            { label: 'Up', value: hbUp, color: 'var(--text-success)', sub: `${hbPct}% dispo` },
+            { label: 'Down', value: hbDown, color: 'var(--text-danger)' },
+            { label: 'Événements', value: events.length, color: 'var(--text-warning)' },
+            { label: 'Alertes', value: alerts.length, color: critAlerts > 0 ? 'var(--text-danger)' : 'var(--text-info)' },
+            { label: 'Actifs', value: assets.length, color: 'var(--text-success)', sub: `${activeAssets} actifs` },
+        ]);
+        document.getElementById('dash-hb-detail').innerHTML = `
+            <div class="metric"><span>Total</span><span class="metric-value">${heartbeats.length}</span></div>
+            <div class="metric"><span style="color:var(--text-success)">Up</span><span class="metric-value" style="color:var(--text-success)">${hbUp}</span></div>
+            <div class="metric"><span style="color:var(--text-danger)">Down</span><span class="metric-value" style="color:var(--text-danger)">${hbDown}</span></div>
+        `;
+        document.getElementById('dash-ev-detail').innerHTML = `
+            <div class="metric"><span>Total</span><span class="metric-value">${events.length}</span></div>
+        `;
+        document.getElementById('dash-alert-detail').innerHTML = `
+            <div class="metric"><span>Total</span><span class="metric-value">${alerts.length}</span></div>
+            <div class="metric"><span style="color:var(--text-danger)">Critiques</span><span class="metric-value" style="color:var(--text-danger)">${critAlerts}</span></div>
+            <div class="metric"><span style="color:var(--text-warning)">Élevées</span><span class="metric-value" style="color:var(--text-warning)">${highAlerts}</span></div>
+        `;
+        document.getElementById('dash-asset-detail').innerHTML = `
+            <div class="metric"><span>Total</span><span class="metric-value">${assets.length}</span></div>
+            <div class="metric"><span style="color:var(--text-success)">Actifs</span><span class="metric-value" style="color:var(--text-success)">${activeAssets}</span></div>
+            <div class="metric"><span style="color:var(--text-tertiary)">Inactifs</span><span class="metric-value">${assets.length - activeAssets}</span></div>
+        `;
+    } catch (err) {
+        showToast('Dashboard: ' + err.message, 'error');
+    }
 }
 
 // ===== HEALTH =====
@@ -431,6 +510,7 @@ async function loadAudit() {
 // ===== SECTIONS MAP FOR AUTO-LOAD =====
 
 const sectionLoaders = {
+    dashboard: loadDashboard,
     heartbeats: loadHeartbeats,
     events: loadEvents,
     assets: loadAssets,

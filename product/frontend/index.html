@@ -50,8 +50,13 @@
         </div>
 
         <nav class="sidebar-nav">
+            <div class="section-label">Général</div>
+            <button onclick="showSection('dashboard')" data-section="dashboard" class="active">
+                <span class="icon">&#9632;</span> <span>Tableau de bord</span>
+            </button>
+
             <div class="section-label">Télémétrie</div>
-            <button onclick="showSection('heartbeats')" data-section="heartbeats" class="active">
+            <button onclick="showSection('heartbeats')" data-section="heartbeats">
                 <span class="icon">&#9675;</span> <span>Heartbeats</span>
             </button>
             <button onclick="showSection('events')" data-section="events">
@@ -84,8 +89,40 @@
     <!-- Main Content -->
     <main class="main-content">
 
+        <!-- DASHBOARD -->
+        <section id="dashboard" class="content-section active">
+            <div class="section-header">
+                <div>
+                    <h2>Tableau de bord</h2>
+                    <p class="section-desc">Synthèse en temps réel de l'activité SOC</p>
+                </div>
+            </div>
+            <div id="dash-stats" class="stats-row"></div>
+            <div class="action-bar">
+                <button onclick="loadDashboard()" class="btn btn-outline">Actualiser</button>
+            </div>
+            <div id="dash-breakdown" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px;">
+                <div class="dash-card">
+                    <div class="dash-card-header">Heartbeats</div>
+                    <div id="dash-hb-detail" class="dash-card-body"><span class="text-secondary">Chargement...</span></div>
+                </div>
+                <div class="dash-card">
+                    <div class="dash-card-header">Événements</div>
+                    <div id="dash-ev-detail" class="dash-card-body"><span class="text-secondary">Chargement...</span></div>
+                </div>
+                <div class="dash-card">
+                    <div class="dash-card-header">Alertes</div>
+                    <div id="dash-alert-detail" class="dash-card-body"><span class="text-secondary">Chargement...</span></div>
+                </div>
+                <div class="dash-card">
+                    <div class="dash-card-header">Actifs</div>
+                    <div id="dash-asset-detail" class="dash-card-body"><span class="text-secondary">Chargement...</span></div>
+                </div>
+            </div>
+        </section>
+
         <!-- HEARTBEATS -->
-        <section id="heartbeats" class="content-section active">
+        <section id="heartbeats" class="content-section">
             <div class="section-header">
                 <div>
                     <h2>Heartbeats</h2>

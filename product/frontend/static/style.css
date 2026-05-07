@@ -441,6 +441,47 @@ body {
   margin-top: 2px;
 }
 
+/* ============ DASHBOARD CARDS ============ */
+
+.dash-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.dash-card-header {
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-primary);
+  background: var(--bg-secondary);
+}
+
+.dash-card-body {
+  padding: 14px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.dash-card-body .metric {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.dash-card-body .metric:last-child {
+  border-bottom: none;
+}
+
+.dash-card-body .metric-value {
+  font-weight: 600;
+}
+
 /* ============ BUTTONS ============ */
 
 .action-bar {
@@ -877,4 +918,5 @@ table.data-table tbody tr:last-child td {
   .main-content { padding: 16px; }
   .stats-row { grid-template-columns: repeat(2, 1fr); }
   .form-row { grid-template-columns: 1fr; }
+  #dash-breakdown { grid-template-columns: 1fr !important; }
 }
