@@ -49,6 +49,8 @@ async def list_heartbeats(
     format: str = "json",
     endpoint_id: str | None = None,
     status: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
 ):
     """Retourne la liste des heartbeats avec filtres optionnels."""
     seed_default_users(db)
@@ -57,7 +59,7 @@ async def list_heartbeats(
         query = query.filter(Heartbeat.endpoint_id == endpoint_id)
     if status:
         query = query.filter(Heartbeat.status == status)
-    heartbeats = query.order_by(Heartbeat.timestamp.desc()).all()
+    heartbeats = query.order_by(Heartbeat.timestamp.desc()).offset(offset).limit(limit).all()
 
     if format == "csv":
         header = "id,endpoint_id,timestamp,status,created_at\n"

@@ -16,8 +16,10 @@ async def list_correlations(
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
     format: str = "json",
+    limit: int = 100,
+    offset: int = 0,
 ):
-    groups = db.query(CorrelationGroupModel).order_by(CorrelationGroupModel.created_at.desc()).all()
+    groups = db.query(CorrelationGroupModel).order_by(CorrelationGroupModel.created_at.desc()).offset(offset).limit(limit).all()
 
     if format == "csv":
         header = "id,correlation_type,source_ip,target_ip,event_type,event_count,window_start,window_end,created_at\n"

@@ -1,5 +1,10 @@
 """Configuration pytest pour WAZASH backend — EPIC-07."""
 
+import os
+
+# Force SQLite for ALL tests BEFORE any app imports
+os.environ["DATABASE_URL"] = "sqlite:///./test_wazash.db"
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -14,8 +19,7 @@ from app.core.security import get_current_user, verify_agent_key
 from app.core.storage import seed_default_users
 from app.main import app
 
-# Force SQLite in-memory for tests
-TEST_DATABASE_URL = "sqlite:///./test_wazash.db"
+TEST_DATABASE_URL = settings.database_url
 
 engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
 TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -31,7 +35,7 @@ def override_get_db():
 
 async def override_get_current_user():
     from app.models.user import User
-    return User(email="test@wazash.io", role="admin", is_active=True)
+    return User(id=1, email="test@wazash.io", role="admin", is_active=True)
 
 
 def override_verify_agent_key():

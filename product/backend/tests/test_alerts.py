@@ -31,7 +31,7 @@ def test_alert_generation_after_event(client) -> None:
     assert len(alerts) == 1
     assert alerts[0]["rule_name"] == "intrusion_detected"
     assert alerts[0]["severity"] == "critical"
-    assert alerts[0]["status"] == "open"
+    assert alerts[0]["status"] == "new"
     assert "id" in alerts[0]
     assert "event_id" in alerts[0]
     assert "timestamp" in alerts[0]
@@ -77,7 +77,7 @@ def test_alert_rule_matching(client) -> None:
     assert len(alerts) == 1
     assert alerts[0]["rule_name"] == "malware_detected"
     assert alerts[0]["severity"] == "high"
-    assert alerts[0]["status"] == "open"
+    assert alerts[0]["status"] == "new"
 
 
 def test_generate_endpoint(client) -> None:
@@ -165,3 +165,46 @@ def test_multiple_alerts_generation(client) -> None:
     rule_names = {alert["rule_name"] for alert in alerts}
     assert "intrusion_detected" in rule_names
     assert "malware_detected" in rule_names
+
+
+def test_patch_alert_status(client) -> None:
+    """Teste PATCH /api/v1/alerts/{id} pour changer le statut."""
+    payload = {
+        "endpoint_id": "ep-001",
+        "timestamp": "2026-05-06T10:30:00",
+        "event_type": "intrusion",
+        "severity": "high",
+        "details": {"source_ip": "10.0.0.50"},
+    }
+    gen = client.post("/api/v1/alerts/generate", json=payload)
+    alert_id = gen.json()["alert_id"]
+
+    patch = client.patch(f"/api/v1/alerts/{alert_id}", json={"status": "in_review"})
+    assert patch.status_code == 200
+    assert patch.json()["status"] == "in_review"
+
+    patch2 = client.patch(f"/api/v1/alerts/{alert_id}", json={"status": "closed"})
+    assert patch2.status_code == 200
+    assert patch2.json()["status"] == "closed"
+
+
+def test_patch_alert_invalid_status(client) -> None:
+    """Teste PATCH avec un statut invalide."""
+    payload = {
+        "endpoint_id": "ep-001",
+        "timestamp": "2026-05-06T10:30:00",
+        "event_type": "intrusion",
+        "severity": "high",
+        "details": {"source_ip": "10.0.0.50"},
+    }
+    gen = client.post("/api/v1/alerts/generate", json=payload)
+    alert_id = gen.json()["alert_id"]
+
+    resp = client.patch(f"/api/v1/alerts/{alert_id}", json={"status": "invalid"})
+    assert resp.status_code == 422
+
+
+def test_patch_alert_not_found(client) -> None:
+    """Teste PATCH sur une alerte inexistante."""
+    resp = client.patch("/api/v1/alerts/99999", json={"status": "closed"})
+    assert resp.status_code == 404

@@ -19,6 +19,8 @@ async def list_audit_logs(
     format: str = "json",
     action: str | None = None,
     user_email: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
 ):
     """Retourne la liste des logs d'audit avec filtres optionnels."""
     seed_default_users(db)
@@ -28,7 +30,7 @@ async def list_audit_logs(
         query = query.filter(AuditLog.action == action)
     if user_email:
         query = query.filter(AuditLog.user_email == user_email)
-    logs = query.order_by(AuditLog.timestamp.desc()).all()
+    logs = query.order_by(AuditLog.timestamp.desc()).offset(offset).limit(limit).all()
 
     if format == "csv":
         header = "id,timestamp,action,user_email,details,created_at\n"

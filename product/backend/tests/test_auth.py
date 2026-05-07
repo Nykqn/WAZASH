@@ -11,6 +11,16 @@ def test_login_valid(client) -> None:
     assert response.status_code == 200
     data = response.json()
     assert "access_token" in data
+
+
+def test_auth_me(client) -> None:
+    """Teste GET /api/v1/auth/me retourne le profil courant."""
+    resp = client.get("/api/v1/auth/me")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["email"] == "test@wazash.io"
+    assert data["role"] == "admin"
+    assert data["is_active"] is True
     assert data["access_token"] != "dummy-token-123"  # Doit être un vrai JWT
     assert data["token_type"] == "bearer"
 
@@ -68,3 +78,13 @@ def test_login_user_analyst(client) -> None:
     assert response.status_code == 200
     data = response.json()
     assert "access_token" in data
+
+
+def test_auth_me(client) -> None:
+    """Teste GET /api/v1/auth/me retourne le profil courant."""
+    resp = client.get("/api/v1/auth/me")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["email"] == "test@wazash.io"
+    assert data["role"] == "admin"
+    assert data["is_active"] is True

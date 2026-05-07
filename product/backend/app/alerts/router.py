@@ -25,6 +25,8 @@ async def list_alerts(
     format: str = "json",
     severity: str | None = None,
     status: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
 ):
     """Retourne la liste des alertes avec filtres optionnels."""
     seed_default_users(db)
@@ -33,7 +35,7 @@ async def list_alerts(
         query = query.filter(Alert.severity == severity)
     if status:
         query = query.filter(Alert.status == status)
-    alerts = query.order_by(Alert.timestamp.desc()).all()
+    alerts = query.order_by(Alert.timestamp.desc()).offset(offset).limit(limit).all()
 
     if format == "csv":
         header = "id,event_id,rule_name,severity,timestamp,status,created_at\n"

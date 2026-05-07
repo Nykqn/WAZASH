@@ -1,6 +1,6 @@
 # ORDER — État du projet WAZASH
 
-*Dernière mise à jour : 2026-05-07*
+*Dernière mise à jour : 2026-05-07 (session 2)*
 
 ## Contexte
 
@@ -21,6 +21,8 @@ Stack Docker : backend, frontend (Nginx), PostgreSQL, endpoint-simulator, attack
 - Corrélation IP basique : ≥3 événements même IP en 10min → CorrelationGroup
 - CORS configurable via `settings.cors_origins`
 - Exports CSV/JSON sur tous les GET endpoints
+- Pagination (limit/offset) sur tous les GET endpoints
+- GET /auth/me — profil utilisateur courant
 
 ### Frontend (product/frontend/)
 - GitHub Dark Theme, sidebar, toasts
@@ -33,8 +35,10 @@ Stack Docker : backend, frontend (Nginx), PostgreSQL, endpoint-simulator, attack
 - Simulateurs endpoint-simulator (heartbeat) + attacker-simulator (attaques)
 
 ### Tests
-- 50/50 pytest pass (sous Docker — PostgreSQL)
+- 56/56 pytest pass (sous Docker — PostgreSQL)
 - Auth mocks dans `conftest.py` (dependency_overrides)
+- Nouveaux tests : PATCH alerte, corrélation IP, /auth/me
+- `conftest.py` force `DATABASE_URL` via `os.environ` avant tout import (fix local)
 
 ## Mots-clés pour retrouver rapidement
 
@@ -61,22 +65,20 @@ Stack Docker : backend, frontend (Nginx), PostgreSQL, endpoint-simulator, attack
 Board public : https://github.com/Nykqn/WAZASH/projects
 Issues #1 à #20 créées, liées au board avec statuts.
 - **Done (14)** : #1-#14 (EPICs + features — closed)
-- **In Progress (3)** : #15 Tests corrélation, #16 Tests PATCH, #17 CORS
-- **Todo (3)** : #18 Pagination, #19 GET /auth/me, #20 Documentation API
+- **Done (17)** : #1-#14, #18 (Pagination), #19 (GET /auth/me), #20 (Doc API — closed)
+- **In Progress (2)** : #15 Tests corrélation, #17 CORS
+- **Todo (1)** : #16 Tests PATCH alerte (reopened, coded but needs Docker rebuild)
 
 ## P1 gaps encore ouverts (cahier des charges)
 
-- Pagination GET endpoints
-- Endpoint GET /auth/me (profil courant)
-- Tests dédiés pour corrélation et PATCH alerte
+- _(plus aucun — tous les P1 sont implémentés)_
 
 ## Problèmes connus
 
-- `.env` pointe vers PostgreSQL — les tests hors Docker échouent
 - `git push` bloqué par règle OpenCode — faire manuellement
 - Remote URL contient le token (nettoyer après push)
 - `.env` contient `JWT_SECRET_KEY=change-me-in-production` — changer pour production
-- Token GitHub scope `project` nécessaire pour modifier le board
+- `datetime.utcnow()` déprécié Python 3.14 — remplacer par `datetime.now(UTC)`
 
 ---
 

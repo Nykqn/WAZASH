@@ -19,12 +19,14 @@ async def list_assets(
     _: User = Depends(get_current_user),
     format: str = "json",
     status_filter: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
 ):
     seed_default_users(db)
     query = db.query(Asset)
     if status_filter:
         query = query.filter(Asset.status == status_filter)
-    assets = query.order_by(Asset.updated_at.desc()).all()
+    assets = query.order_by(Asset.updated_at.desc()).offset(offset).limit(limit).all()
 
     if format == "csv":
         header = "id,endpoint_id,hostname,ip_address,os,status,last_seen,created_at\n"

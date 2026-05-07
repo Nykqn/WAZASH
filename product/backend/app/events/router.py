@@ -47,6 +47,8 @@ async def list_events(
     event_type: str | None = None,
     severity: str | None = None,
     endpoint_id: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
 ):
     """Retourne la liste des événements avec filtres optionnels."""
     seed_default_users(db)
@@ -57,7 +59,7 @@ async def list_events(
         query = query.filter(Event.event_type == event_type)
     if severity:
         query = query.filter(Event.severity == severity)
-    events = query.order_by(Event.timestamp.desc()).all()
+    events = query.order_by(Event.timestamp.desc()).offset(offset).limit(limit).all()
 
     if format == "csv":
         header = "id,endpoint_id,timestamp,event_type,severity,details,created_at\n"
