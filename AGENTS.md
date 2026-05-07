@@ -1,4 +1,4 @@
-# DevinciWatch - Règles OpenCode avec OpenAI
+# Règles OpenCode avec OpenAI
 
 ## Objectif
 
