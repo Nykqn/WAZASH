@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     agent_api_key: str = "wazash-agent-key-2026"
+    cors_origins: list[str] = ["http://localhost:8080", "http://127.0.0.1:8080"]
 
 
 settings = Settings()

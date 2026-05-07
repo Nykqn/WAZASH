@@ -73,6 +73,9 @@
             <button onclick="showSection('audit')" data-section="audit">
                 <span class="icon">&#9673;</span> <span>Audit</span>
             </button>
+            <button onclick="showSection('correlations')" data-section="correlations">
+                <span class="icon">&#8644;</span> <span>Corrélations</span>
+            </button>
         </nav>
 
         <div class="sidebar-footer">
@@ -117,6 +120,10 @@
                 <div class="dash-card">
                     <div class="dash-card-header">Actifs</div>
                     <div id="dash-asset-detail" class="dash-card-body"><span class="text-secondary">Chargement...</span></div>
+                </div>
+                <div class="dash-card">
+                    <div class="dash-card-header">Corrélations</div>
+                    <div id="dash-correlation-detail" class="dash-card-body"><span class="text-secondary">Chargement...</span></div>
                 </div>
             </div>
         </section>
@@ -292,6 +299,27 @@
                 <table id="alerts-table" class="data-table hidden">
                     <thead><tr><th>ID</th><th>Règle</th><th>Sévérité</th><th>Date</th><th>Statut</th></tr></thead>
                     <tbody id="alerts-tbody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- CORRELATIONS -->
+        <section id="correlations" class="content-section">
+            <div class="section-header">
+                <div>
+                    <h2>Corrélations</h2>
+                    <p class="section-desc">Regroupement d'événements par IP source répétée</p>
+                </div>
+            </div>
+            <div class="action-bar">
+                <button onclick="loadCorrelations()" class="btn btn-outline">Actualiser</button>
+                <a href="api/v1/correlations?format=csv" class="btn btn-export" download="correlations.csv">CSV</a>
+            </div>
+            <div class="table-container" id="correlation-container">
+                <div class="empty-state"><div class="empty-icon">&#8644;</div>Aucune corrélation détectée.</div>
+                <table id="correlations-table" class="data-table hidden">
+                    <thead><tr><th>ID</th><th>Type</th><th>IP Source</th><th>Cible</th><th>Event Type</th><th>Compteur</th><th>Début</th><th>Fin</th></tr></thead>
+                    <tbody id="correlations-tbody"></tbody>
                 </table>
             </div>
         </section>

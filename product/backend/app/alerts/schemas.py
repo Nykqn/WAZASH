@@ -18,6 +18,14 @@ class Alert(BaseModel):
     status: str
 
 
+class AlertUpdate(BaseModel):
+    """Schéma pour la mise à jour du statut d'une alerte."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: str
+
+
 class AlertGenerateResponse(BaseModel):
     """Schéma de réponse pour la génération d'alerte."""
 

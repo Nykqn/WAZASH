@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.alerts.rules import match_rule
 from app.core.database import get_db
 from app.core.security import get_current_user, verify_agent_key
-from app.core.storage import add_alert, add_audit_log, add_event, get_events, seed_default_users
+from app.core.storage import add_alert, add_audit_log, add_event, check_and_create_correlation, get_events, seed_default_users
 from app.events.schemas import EventPayload
 from app.models.event import Event
 from app.models.user import User
@@ -20,8 +20,9 @@ router = APIRouter(tags=["events"])
 @router.post("/events")
 async def receive_event(payload: EventPayload, db: Session = Depends(get_db), _: bool = Depends(verify_agent_key)) -> dict[str, str]:
     seed_default_users(db)
-    add_event(db, payload.model_dump())
+    event = add_event(db, payload.model_dump())
     add_audit_log(db, "event_ingested", None, f"Événement {payload.event_type} ingéré")
+    check_and_create_correlation(db, event)
 
     rule = match_rule(payload)
     if rule is not None:
@@ -32,7 +33,7 @@ async def receive_event(payload: EventPayload, db: Session = Depends(get_db), _:
             "rule_name": rule["rule_name"],
             "severity": rule["severity"],
             "timestamp": payload.timestamp,
-            "status": "open",
+            "status": "new",
         })
 
     return {"status": "ok"}

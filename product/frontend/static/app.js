@@ -148,11 +148,12 @@ async function apiFetch(url, options = {}) {
 
 async function loadDashboard() {
     try {
-        const [heartbeats, events, alerts, assets] = await Promise.all([
+        const [heartbeats, events, alerts, assets, correlations] = await Promise.all([
             apiFetch(`${API_BASE}/heartbeats`),
             apiFetch(`${API_BASE}/events`),
             apiFetch(`${API_BASE}/alerts/`),
             apiFetch(`${API_BASE}/assets/`),
+            apiFetch(`${API_BASE}/correlations`),
         ]);
         const hbUp = heartbeats.filter(h => h.status === 'up').length;
         const hbDown = heartbeats.filter(h => h.status === 'down').length;
@@ -167,6 +168,7 @@ async function loadDashboard() {
             { label: 'Événements', value: events.length, color: 'var(--text-warning)' },
             { label: 'Alertes', value: alerts.length, color: critAlerts > 0 ? 'var(--text-danger)' : 'var(--text-info)' },
             { label: 'Actifs', value: assets.length, color: 'var(--text-success)', sub: `${activeAssets} actifs` },
+            { label: 'Corrélations', value: correlations.length, color: 'var(--text-info)' },
         ]);
         document.getElementById('dash-hb-detail').innerHTML = `
             <div class="metric"><span>Total</span><span class="metric-value">${heartbeats.length}</span></div>
@@ -185,6 +187,10 @@ async function loadDashboard() {
             <div class="metric"><span>Total</span><span class="metric-value">${assets.length}</span></div>
             <div class="metric"><span style="color:var(--text-success)">Actifs</span><span class="metric-value" style="color:var(--text-success)">${activeAssets}</span></div>
             <div class="metric"><span style="color:var(--text-tertiary)">Inactifs</span><span class="metric-value">${assets.length - activeAssets}</span></div>
+        `;
+        document.getElementById('dash-correlation-detail').innerHTML = `
+            <div class="metric"><span>Total</span><span class="metric-value">${correlations.length}</span></div>
+            <div class="metric"><span>Événements corrélés</span><span class="metric-value">${correlations.reduce((s, c) => s + c.event_count, 0)}</span></div>
         `;
     } catch (err) {
         showToast('Dashboard: ' + err.message, 'error');
@@ -507,6 +513,41 @@ async function loadAudit() {
     }
 }
 
+// ===== CORRELATIONS =====
+
+async function loadCorrelations() {
+    try {
+        const data = await apiFetch(`${API_BASE}/correlations`);
+        const container = document.getElementById('correlation-container');
+        const table = document.getElementById('correlations-table');
+        const tbody = document.getElementById('correlations-tbody');
+        if (!data || data.length === 0) {
+            container.querySelector('.empty-state').classList.remove('hidden');
+            table.classList.add('hidden');
+            return;
+        }
+        container.querySelector('.empty-state').classList.add('hidden');
+        table.classList.remove('hidden');
+        tbody.innerHTML = '';
+        data.forEach(c => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${c.id}</td>
+                <td>${c.correlation_type}</td>
+                <td><strong>${c.source_ip}</strong></td>
+                <td>${c.target_ip || '-'}</td>
+                <td>${c.event_type || '-'}</td>
+                <td><span class="badge badge-warning">${c.event_count}</span></td>
+                <td>${new Date(c.window_start).toLocaleString('fr-FR')}</td>
+                <td>${new Date(c.window_end).toLocaleString('fr-FR')}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    } catch (err) {
+        showToast('Corrélations: ' + err.message, 'error');
+    }
+}
+
 // ===== SECTIONS MAP FOR AUTO-LOAD =====
 
 const sectionLoaders = {
@@ -516,6 +557,7 @@ const sectionLoaders = {
     assets: loadAssets,
     alerts: loadAlerts,
     audit: loadAudit,
+    correlations: loadCorrelations,
 };
 
 // ===== INIT =====

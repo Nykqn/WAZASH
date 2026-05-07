@@ -47,6 +47,16 @@ def get_events(db: Session) -> list[Event]:
     return db.query(Event).all()
 
 
+def update_alert_status(db: Session, alert_id: int, new_status: str) -> Alert | None:
+    alert = db.query(Alert).filter(Alert.id == alert_id).first()
+    if alert is None:
+        return None
+    alert.status = new_status
+    db.commit()
+    db.refresh(alert)
+    return alert
+
+
 def add_alert(db: Session, alert_data: dict[str, Any]) -> Alert:
     alert = Alert(
         event_id=alert_data["event_id"],
@@ -97,6 +107,42 @@ def create_user(db: Session, email: str, password: str, role: str = "analyst") -
     db.commit()
     db.refresh(user)
     return user
+
+
+def check_and_create_correlation(db: Session, event: Event) -> None:
+    from datetime import timedelta
+    from app.models.correlation import CorrelationGroup
+    source_ip = event.details.get("source_ip") if isinstance(event.details, dict) else None
+    if not source_ip:
+        return
+    window_minutes = 10
+    cutoff = datetime.utcnow() - timedelta(minutes=window_minutes)
+    recent = db.query(Event).filter(
+        Event.timestamp >= cutoff,
+        Event.id != event.id,
+    ).all()
+    same_source = [e for e in recent if isinstance(e.details, dict) and e.details.get("source_ip") == source_ip]
+    same_source.append(event)
+    if len(same_source) >= 3:
+        existing = db.query(CorrelationGroup).filter(
+            CorrelationGroup.source_ip == source_ip,
+            CorrelationGroup.window_end >= cutoff,
+        ).first()
+        if existing:
+            existing.event_count = len(same_source)
+            existing.window_end = event.timestamp
+        else:
+            group = CorrelationGroup(
+                correlation_type="ip_repetition",
+                source_ip=source_ip,
+                target_ip=event.details.get("target_ip"),
+                event_type=event.event_type,
+                window_start=min(e.timestamp for e in same_source),
+                window_end=max(e.timestamp for e in same_source),
+                event_count=len(same_source),
+            )
+            db.add(group)
+        db.commit()
 
 
 def seed_default_users(db: Session) -> None:
