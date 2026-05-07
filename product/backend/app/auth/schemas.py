@@ -10,3 +10,11 @@ class LoginPayload(BaseModel):
 
     email: str
     password: str
+
+
+class TokenResponse(BaseModel):
+    """Réponse après connexion réussie."""
+
+    access_token: str
+    token_type: str
+    expires_in: int = 1800  # 30 minutes default

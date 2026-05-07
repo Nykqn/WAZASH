@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     debug: bool = False
     api_v1_prefix: str = "/api/v1"
     secret_key: str = "dummy-secret-key-for-skeleton-only"
+    database_url: str = "sqlite:///./wazash.db"
+    jwt_secret_key: str = "dev-secret-key-change-in-production"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
 
 
 settings = Settings()

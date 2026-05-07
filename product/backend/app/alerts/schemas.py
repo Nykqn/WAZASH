@@ -8,14 +8,14 @@ from pydantic import BaseModel, ConfigDict
 class Alert(BaseModel):
     """Schéma pour une alerte générée."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(from_attributes=True)
 
     id: int
     event_id: int
     rule_name: str
-    severity: str  # ex: "critical", "high"
+    severity: str
     timestamp: datetime
-    status: str  # ex: "open"
+    status: str
 
 
 class AlertGenerateResponse(BaseModel):

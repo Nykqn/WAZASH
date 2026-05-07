@@ -1,38 +1,40 @@
 """Router pour l'authentification."""
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
 from app.auth.schemas import LoginPayload
-from app.core.storage import add_audit_log
+from app.core.database import get_db
+from app.core.security import create_access_token, verify_password
+from app.core.storage import add_audit_log, get_user_by_email, seed_default_users
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# Stockage en mémoire fictif (skeleton - pas de base de données)
-_FAKE_USERS = {
-    "admin@wazash.io": "dummy123",
-    "user@wazash.io": "test456",
-}
-
 
 @router.post("/login")
-def login(payload: LoginPayload) -> dict:
-    """
-    Authentifie un utilisateur et retourne un token d'accès fictif.
+def login(payload: LoginPayload, db: Session = Depends(get_db)) -> dict:
+    # Ensure default users exist
+    seed_default_users(db)
 
-    - **email** : Adresse email de l'utilisateur
-    - **password** : Mot de passe
-    """
-    stored_password = _FAKE_USERS.get(payload.email)
+    user = get_user_by_email(db, payload.email)
 
-    if stored_password is None or stored_password != payload.password:
+    if user is None or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
         )
 
-    add_audit_log("login", payload.email, f"Connexion réussie pour {payload.email}")
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is disabled",
+        )
+
+    add_audit_log(db, "login", user.email, f"Connexion réussie pour {user.email}")
+
+    access_token = create_access_token(data={"sub": user.email, "role": user.role})
 
     return {
-        "access_token": "dummy-token-123",
+        "access_token": access_token,
         "token_type": "bearer",
     }

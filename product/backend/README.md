@@ -50,6 +50,50 @@ L'API est accessible sur :
 - http://localhost:8000/docs (Documentation Swagger UI)
 - http://localhost:8000/redoc (Documentation ReDoc)
 
+## Lancement avec Docker
+
+### Prérequis
+- Docker
+- Docker Compose
+
+### 1. Construire et lancer l'image
+
+```bash
+cd product/backend
+docker compose up -d --build
+```
+
+### 2. Vérifier que l'application fonctionne
+
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# Voir les logs
+docker compose logs -f wazash-backend
+
+# Exécuter les tests dans le conteneur
+docker compose exec wazash-backend pytest -v
+```
+
+### 3. Arrêter l'application
+
+```bash
+docker compose down
+```
+
+### 4. Variables d'environnement pour Docker
+
+Créer un fichier `.env` basé sur `.env.example` :
+
+```bash
+cp .env.example .env
+```
+
+Le fichier `.env` est automatiquement chargé par Docker Compose (il doit être dans le même dossier que `docker-compose.yml`).
+
+**Note de sécurité** : Le fichier `.env` est exclu de l'image Docker via `.dockerignore`.
+
 ## EPIC-02 Features (Heartbeat & Events Ingestion)
 
 L'EPIC-02 ajoute l'ingestion de heartbeats et d'événements depuis les endpoints WAZASH.

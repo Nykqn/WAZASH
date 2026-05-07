@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict
 class AuditLog(BaseModel):
     """Schema pour un log d'audit."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(from_attributes=True)
 
     id: int
     timestamp: datetime

@@ -1,71 +1,106 @@
-"""Stockage en mémoire pour les heartbeats, événements, alertes et logs d'audit."""
+"""Stockage SQLAlchemy pour heartbeats, événements, alertes et logs d'audit."""
 
 from datetime import datetime
 from typing import Any
 
-from app.alerts.schemas import Alert
-from app.audit.schemas import AuditLog
+from sqlalchemy.orm import Session
 
-# Stockage en mémoire (listes simples)
-heartbeats_store: list[dict[str, Any]] = []
-events_store: list[dict[str, Any]] = []
-alerts_store: list[Alert] = []
-audit_store: list[AuditLog] = []
-
-# Compteurs pour générer des IDs uniques
-alert_id_counter: int = 0
-audit_id_counter: int = 0
+from app.core.security import get_password_hash
+from app.models.alert import Alert
+from app.models.audit import AuditLog
+from app.models.event import Event
+from app.models.heartbeat import Heartbeat
+from app.models.user import User
 
 
-def add_heartbeat(heartbeat: dict[str, Any]) -> None:
-    """Ajoute un heartbeat au stockage en mémoire."""
-    heartbeats_store.append(heartbeat)
+def add_heartbeat(db: Session, payload: dict[str, Any]) -> Heartbeat:
+    heartbeat = Heartbeat(
+        endpoint_id=payload["endpoint_id"],
+        timestamp=payload["timestamp"],
+        status=payload["status"],
+    )
+    db.add(heartbeat)
+    db.commit()
+    db.refresh(heartbeat)
+    return heartbeat
 
 
-def add_event(event: dict[str, Any]) -> None:
-    """Ajoute un événement au stockage en mémoire."""
-    events_store.append(event)
+def add_event(db: Session, payload: dict[str, Any]) -> Event:
+    event = Event(
+        endpoint_id=payload["endpoint_id"],
+        timestamp=payload["timestamp"],
+        event_type=payload["event_type"],
+        severity=payload["severity"],
+        details=payload.get("details", {}),
+    )
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    return event
 
 
-def get_heartbeats() -> list[dict[str, Any]]:
-    """Retourne tous les heartbeats stockés."""
-    return heartbeats_store
+def get_heartbeats(db: Session) -> list[Heartbeat]:
+    return db.query(Heartbeat).all()
 
 
-def get_events() -> list[dict[str, Any]]:
-    """Retourne tous les événements stockés."""
-    return events_store
+def get_events(db: Session) -> list[Event]:
+    return db.query(Event).all()
 
 
-def add_alert(alert: Alert) -> Alert:
-    """Ajoute une alerte au stockage en mémoire."""
-    global alert_id_counter
-    alert_id_counter += 1
-    alert.id = alert_id_counter
-    alerts_store.append(alert)
+def add_alert(db: Session, alert_data: dict[str, Any]) -> Alert:
+    alert = Alert(
+        event_id=alert_data["event_id"],
+        rule_name=alert_data["rule_name"],
+        severity=alert_data["severity"],
+        timestamp=alert_data["timestamp"],
+        status=alert_data.get("status", "open"),
+    )
+    db.add(alert)
+    db.commit()
+    db.refresh(alert)
     return alert
 
 
-def get_alerts() -> list[Alert]:
-    """Retourne toutes les alertes stockées."""
-    return alerts_store
+def get_alerts(db: Session) -> list[Alert]:
+    return db.query(Alert).all()
 
 
-def add_audit_log(action: str, user_email: str | None, details: str) -> AuditLog:
-    """Ajoute un log d'audit au stockage en mémoire."""
-    global audit_id_counter
-    audit_id_counter += 1
+def add_audit_log(db: Session, action: str, user_email: str | None, details: str) -> AuditLog:
     log = AuditLog(
-        id=audit_id_counter,
-        timestamp=datetime.now(),
+        timestamp=datetime.utcnow(),
         action=action,
         user_email=user_email,
         details=details,
     )
-    audit_store.append(log)
+    db.add(log)
+    db.commit()
+    db.refresh(log)
     return log
 
 
-def get_audit_logs() -> list[AuditLog]:
-    """Retourne tous les logs d'audit stockés."""
-    return audit_store
+def get_audit_logs(db: Session) -> list[AuditLog]:
+    return db.query(AuditLog).order_by(AuditLog.timestamp.desc()).all()
+
+
+def get_user_by_email(db: Session, email: str) -> User | None:
+    return db.query(User).filter(User.email == email).first()
+
+
+def create_user(db: Session, email: str, password: str, role: str = "analyst") -> User:
+    user = User(
+        email=email,
+        hashed_password=get_password_hash(password),
+        role=role,
+        is_active=True,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def seed_default_users(db: Session) -> None:
+    if get_user_by_email(db, "admin@wazash.io") is None:
+        create_user(db, "admin@wazash.io", "dummy123", role="admin")
+    if get_user_by_email(db, "user@wazash.io") is None:
+        create_user(db, "user@wazash.io", "test456", role="analyst")
